@@ -1,0 +1,56 @@
+{
+  "name": "@console-one/source",
+  "version": "0.1.0",
+  "description": "Event-sourced VCS for source text using character-index mutations. Deterministic forward/backward replay, promise-based dedup cache, pluggable hot/cold storage adapters. Designed for collaborative editing on stateless runtimes (e.g. Lambda).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/console-one/source.git"
+  },
+  "bugs": {
+    "url": "https://github.com/console-one/source/issues"
+  },
+  "homepage": "https://github.com/console-one/source#readme",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "smoke": "node dist/smoke.js",
+    "test": "vitest run",
+    "prepublishOnly": "npm run clean && npm run build && npm run smoke"
+  },
+  "keywords": [
+    "vcs",
+    "event-sourcing",
+    "character-diff",
+    "collaborative-editing",
+    "source-control",
+    "lambda",
+    "serverless",
+    "checkpoint",
+    "deterministic-replay"
+  ],
+  "author": "Andrew Chalmers",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "@console-one/multimap": "^0.2.0",
+    "heap-js": "^2.7.1"
+  }
+}
