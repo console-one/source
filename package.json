@@ -1,7 +1,7 @@
 {
   "name": "@console-one/source",
-  "version": "0.1.0",
-  "description": "Event-sourced VCS for source text using character-index mutations. Deterministic forward/backward replay, promise-based dedup cache, pluggable hot/cold storage adapters. Designed for collaborative editing on stateless runtimes (e.g. Lambda).",
+  "version": "0.1.1",
+  "description": "Event-sourced VCS for source text using character-index mutations. Deterministic forward replay, promise-based dedup cache, pluggable hot/cold storage adapters. Designed for collaborative editing on stateless runtimes (e.g. Lambda).",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/console-one/source.git"
