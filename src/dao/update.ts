@@ -12,12 +12,13 @@ import { ColumnKey, PartitionMap, SortedSet } from '../adapters/types.js'
  *
  * The engine (`Code.View.Checkpoint`) never touches storage directly —
  * all reads and writes of `SourceUpdate` records flow through this
- * interface.
+ * interface. Generic over `TPatch` because a `SourceUpdate` carries a
+ * list of patches, but this DAO doesn't inspect them.
  */
-export interface Update {
-  save(sourceUpdate: SourceUpdate): Promise<boolean>
+export interface Update<TPatch = unknown> {
+  save(sourceUpdate: SourceUpdate<TPatch>): Promise<boolean>
   delete(version: SourceID): Promise<boolean>
-  load(functionAddress: SourceID[]): Promise<SourceUpdate[]>
+  load(functionAddress: SourceID[]): Promise<SourceUpdate<TPatch>[]>
   addToWorkspaceCommit(source: SourceCommit): Promise<Version>
 }
 
@@ -30,21 +31,16 @@ export namespace Update {
    * version)` and indexes versions in a `SortedSet` keyed by
    * `(workspace, path)` so the most recent version for a workspace can be
    * found in O(log n).
-   *
-   * Originally named `RedisImpl` in the source monorepo, but — per the
-   * source's own TODO — there is nothing Redis-specific in here. Back it
-   * with any `PartitionMap` + `SortedSet` implementation (Redis hash +
-   * sorted set, Postgres table + index, in-memory Map + sorted array).
    */
-  export class Default implements Update {
+  export class Default<TPatch = unknown> implements Update<TPatch> {
 
     constructor(
-      private map: PartitionMap<SourceUpdate>,
+      private map: PartitionMap<SourceUpdate<TPatch>>,
       private sset: SortedSet<number>
     ) {
     }
 
-    async save(sourceUpdate: SourceUpdate): Promise<boolean> {
+    async save(sourceUpdate: SourceUpdate<TPatch>): Promise<boolean> {
       const mapColumns = ColumnKey.from(sourceUpdate.lineage[0][0].path)
       const mapPromise = this.map.set(mapColumns.extend(sourceUpdate.lineage[0][0].version + ''), sourceUpdate)
 
@@ -74,9 +70,9 @@ export namespace Update {
       })
     }
 
-    async load(programVersionKeys: SourceID[]): Promise<SourceUpdate[]> {
+    async load(programVersionKeys: SourceID[]): Promise<SourceUpdate<TPatch>[]> {
       const namespacesToVersions: ListMultimap<string, number> = Default.byNamespace(programVersionKeys)
-      const retrievals = new Heap<SourceUpdate>((a, b) => a.lineage[0][0].version > b.lineage[0][0].version ?
+      const retrievals = new Heap<SourceUpdate<TPatch>>((a, b) => a.lineage[0][0].version > b.lineage[0][0].version ?
         1 : a.lineage[0][0].version === b.lineage[0][0].version ? 0 : -1)
 
       const namespaceKeys = Array.from(namespacesToVersions.keys())
@@ -88,7 +84,7 @@ export namespace Update {
         for (const version of versions) retrievals.push(version[1])
       }
 
-      const result: SourceUpdate[] = []
+      const result: SourceUpdate<TPatch>[] = []
       while (retrievals.length > 0) result.push(retrievals.pop()!)
       return result
     }

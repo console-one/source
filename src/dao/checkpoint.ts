@@ -1,18 +1,20 @@
 import { Checkpoint as SourceCheckpoint } from '../checkpoint.js'
+import { ContentCodec } from '../codec.js'
 import { SourceID } from '../sourceid.js'
 import { UpdateType } from '../update.js'
 import { BlobStore } from '../adapters/types.js'
 import { Update as UpdateDao } from './update.js'
 
 /**
- * Storage adapter for full-source checkpoints.
+ * Storage adapter for full-content checkpoints.
  *
- * A checkpoint is a snapshot of source text + labels at one version.
- * Callers back this with any blob-oriented storage.
+ * A checkpoint is a snapshot of `TContent` + labels at one version. The
+ * codec handles the content ↔ string translation; the BlobStore stores
+ * the resulting string and doesn't care what's inside it.
  */
-export interface Checkpoint {
-  save(source: SourceCheckpoint): Promise<void>
-  load(version: SourceID): Promise<SourceCheckpoint>
+export interface Checkpoint<TContent = string> {
+  save(source: SourceCheckpoint<TContent>): Promise<void>
+  load(version: SourceID): Promise<SourceCheckpoint<TContent>>
   info(): any
 }
 
@@ -21,16 +23,17 @@ export namespace Checkpoint {
   /**
    * Default implementation of the Checkpoint DAO.
    *
-   * Writes base64-encoded source + labels as a JSON document to a
+   * Writes `codec.serialize(content)` + labels as a JSON document to a
    * `BlobStore`, and delegates to the `Update` DAO to resolve lineage on
    * load and to demote a version's type from CHECKPOINT → UPDATE on delete.
-   *
-   * Originally named `S3Redis` in the source monorepo. Nothing here is
-   * S3-specific — any `BlobStore` works.
    */
-  export class Default implements Checkpoint {
+  export class Default<TContent = string, TPatch = unknown> implements Checkpoint<TContent> {
 
-    constructor(public blobStore: BlobStore, public updateDao: UpdateDao) {
+    constructor(
+      public blobStore: BlobStore,
+      public updateDao: UpdateDao<TPatch>,
+      public codec: ContentCodec<TContent, TPatch>
+    ) {
     }
 
     info() {
@@ -59,30 +62,30 @@ export namespace Checkpoint {
       })
     }
 
-    async save(source: SourceCheckpoint): Promise<void> {
-      const checkpoint = JSON.stringify({
+    async save(source: SourceCheckpoint<TContent>): Promise<void> {
+      const blob = JSON.stringify({
         labels: source.labels,
-        source: Buffer.from(source.source, 'utf-8').toString('base64')
+        content: this.codec.serialize(source.content)
       })
-      await this.blobStore.save(source.lineage[0][0].toString(), checkpoint)
+      await this.blobStore.save(source.lineage[0][0].toString(), blob)
     }
 
-    async load(versionKey: SourceID): Promise<SourceCheckpoint> {
-      const versionKeyToRead = versionKey.toString()
-      const jsonObjPromise = this.blobStore.read(versionKeyToRead).then((jsonString) => {
+    async load(versionKey: SourceID): Promise<SourceCheckpoint<TContent>> {
+      const keyStr = versionKey.toString()
+      const jsonObjPromise = this.blobStore.read(keyStr).then((jsonString) => {
         const json = JSON.parse(jsonString)
-        json.source = Buffer.from(json.source, 'base64').toString('utf-8')
-        return json
+        const raw = json.content ?? json.source
+        return { content: this.codec.deserialize(raw), labels: json.labels }
       })
       const updateInfoPromise = this.updateDao.load([versionKey])
-      const [sourceJSON, updateInfo] = await Promise.all([jsonObjPromise, updateInfoPromise])
+      const [contentJSON, updateInfo] = await Promise.all([jsonObjPromise, updateInfoPromise])
 
       if (updateInfo.length < 1) {
         throw new Error(`Attempting to load an update for a version key which does not exist or cannot ` +
           `be returned. Version key: ${versionKey.toString()}`)
       }
 
-      return new SourceCheckpoint(updateInfo[0].lineage, sourceJSON.source, sourceJSON.labels)
+      return new SourceCheckpoint<TContent>(updateInfo[0].lineage, contentJSON.content, contentJSON.labels)
     }
   }
 }

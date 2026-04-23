@@ -8,7 +8,11 @@ export { Label, LabelChange } from './label.js'
 export { Version } from './version.js'
 export { SourceCommit } from './sourcecommit.js'
 
-// Replay engine
+// Content-type seam (generic engine) + text specialization
+export { TextCodec } from './codec.js'
+export type { ContentCodec } from './codec.js'
+
+// Replay engine (text-only utility — wrapped by TextCodec)
 export { Transformations } from './transformations.js'
 export type { Direction } from './transformations.js'
 

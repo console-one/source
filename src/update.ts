@@ -1,5 +1,3 @@
-
-import { SourceChange } from './change.js';
 import { LabelChange } from './label.js';
 import { SourceID } from './sourceid.js';
 
@@ -12,17 +10,24 @@ export type SourceArtifact = [SourceID, UpdateType, string]
 
 export type Lineage = [SourceArtifact, ...SourceArtifact[]];
 
-export class SourceUpdate {
+/**
+ * One saved version's update record.
+ *
+ * Generic over `TPatch` — the text engine uses `SourceChange`, but any
+ * patch shape that round-trips through `ContentCodec.patchToJSON` /
+ * `patchFromJSON` works. `patches` used to be called `sourceCodeChanges`
+ * (pre-0.2.0).
+ */
+export class SourceUpdate<TPatch = unknown> {
 
   constructor(
     public readonly lineage: Lineage,
-    public readonly sourceCodeChanges: SourceChange[],
+    public readonly patches: TPatch[],
     public readonly labelChanges: LabelChange[]) {
 
     if (this.lineage.length <= 0) throw new Error(`Lineage for an update item must always terminate
-      with the version of the item iteself! Therefore this array cannot be empty. But it is, when 
-      creating a source update with changes: ${JSON.stringify(sourceCodeChanges, null, 4)} and labels 
-      ${JSON.stringify(labelChanges, null, 4)}`);
+      with the version of the item itself — this array cannot be empty. Got patches:
+      ${JSON.stringify(patches, null, 2)} and labels ${JSON.stringify(labelChanges, null, 2)}`);
   }
 
   get versionKey(): SourceID {
@@ -30,23 +35,17 @@ export class SourceUpdate {
   }
 
   getVersionKey(): SourceID {
-    return this.lineage[this.lineage.length-1][0];
+    return this.lineage[this.lineage.length - 1][0];
   }
 
-  static fromJSON(json: any) {
-
-    return new SourceUpdate(
-      json.lineage.map(m => [SourceID.fromJSON(m[0]), m[1] as keyof UpdateType, m[2]]), 
-      json.sourceCodeChanges.map(m => SourceChange.fromJSON(m)),
-      json.labelChanges.map(m => LabelChange.fromJSON(m))
+  static fromJSON<TPatch>(
+    json: any,
+    patchFromJSON: (raw: any) => TPatch
+  ): SourceUpdate<TPatch> {
+    return new SourceUpdate<TPatch>(
+      json.lineage.map((m: any) => [SourceID.fromJSON(m[0]), m[1] as keyof UpdateType, m[2]]),
+      (json.patches ?? json.sourceCodeChanges ?? []).map((m: any) => patchFromJSON(m)),
+      json.labelChanges.map((m: any) => LabelChange.fromJSON(m))
     );
-  }
-
-  static Converter = {
-    atob: (update: SourceUpdate) => JSON.stringify(update),
-    btoa: (str: string) => {
-      let json: any = JSON.parse(str);
-      return SourceUpdate.fromJSON(json);
-    }
   }
 }
