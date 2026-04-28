@@ -1,6 +1,6 @@
 {
   "name": "@console-one/source",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Event-sourced VCS engine generic over content type. Ships with a TextCodec (character-index mutations over strings) plus a ContentCodec seam so any replayable type works. Deterministic forward replay, promise-based dedup cache, pluggable hot/cold storage adapters. Designed for collaborative editing on stateless runtimes (e.g. Lambda).",
   "repository": {
     "type": "git",
