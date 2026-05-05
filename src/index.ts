@@ -30,3 +30,40 @@ export {
   InMemorySortedSet,
   InMemoryBlobStore
 } from './adapters/memory.js'
+
+// Filesystem-backed adapters (durable across restarts; no external dep)
+export {
+  FilesystemPartitionMap,
+  FilesystemSortedSet,
+  FilesystemBlobStore
+} from './adapters/filesystem.js'
+
+// SQLite-backed adapters (consumer provides Database; better-sqlite3 / node:sqlite both work)
+export {
+  SqlitePartitionMap,
+  SqliteSortedSet,
+  SqliteBlobStore,
+  ensureSqliteSchema
+} from './adapters/sqlite.js'
+export type { SqliteDatabaseLike, SqliteStatementLike } from './adapters/sqlite.js'
+
+// Directed graph store — sibling primitive to BlobStore/PartitionMap/SortedSet.
+// Answers "what's connected to this address" rather than "what's the state at this address."
+// Used by artifact framework for providers/consumers, dependency edges, reachability.
+export {
+  InMemoryDirectedGraphStore,
+  SqliteDirectedGraphStore,
+  ensureGraphSchema
+} from './adapters/graph.js'
+export type { DirectedGraphStore, DirectedEdge } from './adapters/graph.js'
+
+// SystemLogger — typed log-event stream. Same patch+subscribe shape as
+// the rest of the package; production hosts wire subscribers to forward
+// log events to a Source-backed log process.
+export {
+  log,
+  DefaultSystemLogger,
+  setSystemLogger,
+  getSystemLogger,
+} from './logger.js'
+export type { SystemLogger, LogLevel, LogEvent } from './logger.js'

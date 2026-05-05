@@ -48,6 +48,16 @@ export interface PartitionMap<V> {
   getAll(keys: ColumnKey[]): Promise<Array<[ColumnKey, V]>>
   has(key: ColumnKey): Promise<boolean>
   delete(key: ColumnKey): Promise<void>
+  /**
+   * List all stored key strings whose `key.toString()` starts with `prefix`.
+   * No prefix → list every key. Returns string-form keys (the same
+   * representation the engine writes). Consumers reconstruct `ColumnKey`
+   * by splitting on `'/'` if they need it.
+   *
+   * Used by domain code that needs to enumerate (e.g. "all artifacts at
+   * org X"). The Code.View.Checkpoint engine itself does not use this.
+   */
+  listKeys(prefix?: string): Promise<string[]>
 }
 
 /**

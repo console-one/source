@@ -37,6 +37,14 @@ export class InMemoryPartitionMap<V> implements PartitionMap<V> {
   async delete(key: ColumnKey): Promise<void> {
     this.store.delete(key.toString())
   }
+
+  async listKeys(prefix?: string): Promise<string[]> {
+    const out: string[] = []
+    for (const k of this.store.keys()) {
+      if (prefix === undefined || k.startsWith(prefix)) out.push(k)
+    }
+    return out
+  }
 }
 
 export class InMemorySortedSet<V extends number> implements SortedSet<V> {

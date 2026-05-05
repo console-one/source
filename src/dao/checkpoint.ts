@@ -4,6 +4,9 @@ import { SourceID } from '../sourceid.js'
 import { UpdateType } from '../update.js'
 import { BlobStore } from '../adapters/types.js'
 import { Update as UpdateDao } from './update.js'
+import { log } from '../logger.js'
+
+const SOURCE = '@console-one/source/dao/checkpoint'
 
 /**
  * Storage adapter for full-content checkpoints.
@@ -57,7 +60,7 @@ export namespace Checkpoint {
         value[0].lineage[0][1] = UpdateType.UPDATE
         return this.updateDao.save(value[0])
       }).then(() => true).catch(err => {
-        console.error(`Error trying to delete version key for source update: ${versionKey.toString()}`, err)
+        log.error(SOURCE, 'Error trying to delete version key for source update', { versionKey: versionKey.toString(), err })
         return false
       })
     }

@@ -6,6 +6,9 @@ import { SourceCommit } from '../sourcecommit.js'
 import { Version } from '../version.js'
 import { SourceUpdate } from '../update.js'
 import { ColumnKey, PartitionMap, SortedSet } from '../adapters/types.js'
+import { log } from '../logger.js'
+
+const SOURCE = '@console-one/source/dao/update'
 
 /**
  * Storage adapter for per-version update records.
@@ -47,7 +50,7 @@ export namespace Update {
       const ssetColumns = ColumnKey.from(sourceUpdate.lineage[0][2], sourceUpdate.lineage[0][0].path)
       const ssetPromise = this.sset.add(ssetColumns, sourceUpdate.lineage[0][0].version)
       return Promise.all([mapPromise, ssetPromise]).then(() => true).catch(err => {
-        console.error(`Update dao save error: ${err}`)
+        log.error(SOURCE, 'Update dao save error', { err })
         return false
       })
     }
@@ -65,7 +68,7 @@ export namespace Update {
       const removedFromSet = this.sset.remove(ssetColumns, sourceUpdate.lineage[0][0].version)
       const removedFromMap = this.map.delete(mapColumns)
       return Promise.all([removedFromMap, removedFromSet]).then(() => true).catch(err => {
-        console.error(`Update dao delete error: ${err}`)
+        log.error(SOURCE, 'Update dao delete error', { err })
         return false
       })
     }
@@ -97,7 +100,7 @@ export namespace Update {
         // TODO: add labels to checkpoint (carried over from source)
         return new Version(version)
       } catch (err) {
-        console.error("Add workspace to commit error: ", err)
+        log.error(SOURCE, 'Add workspace to commit error', { err })
         throw err
       }
     }
